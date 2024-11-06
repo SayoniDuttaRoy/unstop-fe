@@ -230,8 +230,7 @@ export default function Chatbot({
             </div>
           )}
           <div className="flex space-x-2 mt-4">
-            <input
-              type="text"
+            <textarea
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               placeholder="Your response will appear here..."

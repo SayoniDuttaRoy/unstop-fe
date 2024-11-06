@@ -75,7 +75,7 @@ export default function Page() {
         </button>
         <p className="text-gray-500">{statusMessage}</p>
       </div>
-      {generatedQuestions.length > 0 && (
+      {generatedQuestions.length === 0 && (
         <div className="max-w-2xl w-full">
           <Chatbot
             jobDesc={jobDescription}

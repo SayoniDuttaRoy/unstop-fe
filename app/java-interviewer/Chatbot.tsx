@@ -44,14 +44,6 @@ export default function Chatbot({
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onstart = () => {
-      setListening(true);
-    };
-
-    recognition.onend = () => {
-      setListening(false);
-    };
-
     recognition.onresult = (event) => {
       let interimTranscript = "";
       let finalTranscript = "";
@@ -113,10 +105,6 @@ export default function Chatbot({
         const interviewerMsg = await readStreamingApiResponseWithRunId(
           response
         );
-        setMessages((chatMessages: any) => {
-          const updatedMessages = chatMessages.slice(0, -1);
-          return [...updatedMessages, { role: "ai", text: interviewerMsg }];
-        });
         handleAIResponse(interviewerMsg);
       } else {
         throw new Error("Failed");
@@ -126,16 +114,13 @@ export default function Chatbot({
 
   const handleAIResponse = (aiMessage: string) => {
     const utterance = new SpeechSynthesisUtterance(aiMessage);
-    utterance.onend = () => {
-      // Start listening to the user after AI finishes speaking
-      startListening();
-    };
     window.speechSynthesis.speak(utterance);
   };
 
   const startListening = () => {
     if (recognitionRef.current && !listening) {
       setTranscript("");
+      setListening(true);
       recognitionRef.current.start();
     }
   };
@@ -143,35 +128,68 @@ export default function Chatbot({
   const readStreamingApiResponseWithRunId = async (response: any) => {
     const reader = response.body?.getReader();
     const decoder = new TextDecoder("utf-8");
-    let result = "";
+    let streamingOutputMsg = "";
     if (response.ok && reader && decoder) {
+      let done = false;
       let partialData = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      let lastDataReceivedTime = Date.now();
+
+      while (!done) {
+        const { value, done: readDone } = await Promise.race([
+          reader.read(),
+          new Promise<any>((resolve) =>
+            setTimeout(() => resolve({ value: null, done: true }), 5000)
+          ),
+        ]);
+        if (Date.now() - lastDataReceivedTime > 5000) {
+          break;
+        }
+        if (value) {
+          lastDataReceivedTime = Date.now();
+        }
+        if (readDone) {
+          break;
+        }
         const decodedValue = decoder.decode(value, { stream: true });
         partialData += decodedValue;
         let lines = partialData.split("\n");
-        partialData = lines.pop() || "";
+        partialData = lines.pop() || ""; // Save incomplete line for next iteration
         for (let line of lines) {
           line = line.trim();
           if (line.startsWith("data:")) {
             const jsonString = line.slice("data:".length).trim();
             if (jsonString === "[DONE]") {
+              done = true;
               break;
             }
             try {
               const parsedJson = JSON.parse(jsonString);
               if (parsedJson.status === "ok") {
-                result = result + parsedJson["out-1"];
                 setRunId(parsedJson.run_id);
+                streamingOutputMsg = streamingOutputMsg + parsedJson["out-1"];
+                setMessages((chatMessages: any) => {
+                  const lastMessage = chatMessages[chatMessages.length - 1];
+                  if (lastMessage && lastMessage.role === "ai") {
+                    // Remove the last message if it's from a bot
+                    const updatedMessages = chatMessages.slice(0, -1);
+                    return [
+                      ...updatedMessages,
+                      { text: streamingOutputMsg, sender: "ai" },
+                    ];
+                  }
+                  // If the last message is not from a bot, just add the new bot message
+                  return [
+                    ...chatMessages,
+                    { text: streamingOutputMsg, sender: "bot" },
+                  ];
+                });
               }
             } catch (error) {}
           }
         }
       }
     }
-    return result;
+    return streamingOutputMsg;
   };
 
   return (
@@ -215,12 +233,18 @@ export default function Chatbot({
             <input
               type="text"
               value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
               placeholder="Your response will appear here..."
               className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
-              readOnly
             />
             <button
-              onClick={() => handleUserMessageSend}
+              onClick={startListening}
+              className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Start Answering
+            </button>
+            <button
+              onClick={() => handleUserMessageSend()}
               className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Send

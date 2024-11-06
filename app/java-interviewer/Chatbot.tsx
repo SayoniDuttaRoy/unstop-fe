@@ -174,13 +174,13 @@ export default function Chatbot({
                     const updatedMessages = chatMessages.slice(0, -1);
                     return [
                       ...updatedMessages,
-                      { text: streamingOutputMsg, sender: "ai" },
+                      { text: streamingOutputMsg, role: "ai" },
                     ];
                   }
                   // If the last message is not from a bot, just add the new bot message
                   return [
                     ...chatMessages,
-                    { text: streamingOutputMsg, sender: "bot" },
+                    { text: streamingOutputMsg, role: "ai" },
                   ];
                 });
               }

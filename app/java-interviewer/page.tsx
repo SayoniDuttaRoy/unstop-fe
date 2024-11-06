@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Chatbot from "./Chatbot";
 
 export default function Page() {
   const [jobDescription, setJobDescription] = useState("");
@@ -80,7 +81,7 @@ export default function Page() {
   };
 
   return (
-    <div className="flex justify-center my-20">
+    <div className="flex justify-center my-20 flex-col gap-16 items-center">
       <div className="max-w-2xl w-full flex flex-col space-y-4">
         <label className="text-lg font-semibold">Job Description</label>
         <textarea
@@ -105,6 +106,11 @@ export default function Page() {
         </button>
         <p className="text-gray-500">{statusMessage}</p>
       </div>
+      {generatedQuestions.length === 0 && (
+        <div className="max-w-2xl w-full">
+          <Chatbot />
+        </div>
+      )}
     </div>
   );
 }

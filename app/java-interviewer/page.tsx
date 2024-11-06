@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Chatbot from "./Chatbot";
+import { readStreamingApiResponse } from "../utils";
 
 export default function Page() {
   const [jobDescription, setJobDescription] = useState("");
@@ -47,39 +48,6 @@ export default function Page() {
     }
   };
 
-  const readStreamingApiResponse = async (response: any) => {
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let result = "";
-    if (response.ok && reader && decoder) {
-      let partialData = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const decodedValue = decoder.decode(value, { stream: true });
-        partialData += decodedValue;
-        let lines = partialData.split("\n");
-        partialData = lines.pop() || "";
-        for (let line of lines) {
-          line = line.trim();
-          if (line.startsWith("data:")) {
-            const jsonString = line.slice("data:".length).trim();
-            if (jsonString === "[DONE]") {
-              break;
-            }
-            try {
-              const parsedJson = JSON.parse(jsonString);
-              if (parsedJson.status === "ok") {
-                result = result + parsedJson["out-1"];
-              }
-            } catch (error) {}
-          }
-        }
-      }
-    }
-    return result;
-  };
-
   return (
     <div className="flex justify-center my-20 flex-col gap-16 items-center">
       <div className="max-w-2xl w-full flex flex-col space-y-4">
@@ -106,9 +74,13 @@ export default function Page() {
         </button>
         <p className="text-gray-500">{statusMessage}</p>
       </div>
-      {generatedQuestions.length === 0 && (
+      {generatedQuestions.length > 0 && (
         <div className="max-w-2xl w-full">
-          <Chatbot />
+          <Chatbot
+            jobDesc={jobDescription}
+            skills={skills}
+            generatedQuestions={generatedQuestions}
+          />
         </div>
       )}
     </div>

@@ -18,13 +18,13 @@ export default function Chatbot({
   skills,
   generatedQuestions,
 }: ChatbotProps) {
+  const [hasStarted, setHasStarted] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [transcript, setTranscript] = useState("");
   const [listening, setListening] = useState(false);
   const [runId, setRunId] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Check for browser support
   const isBrowserSupportsSpeechRecognition = !!(
     typeof window !== "undefined" &&
     (window.SpeechRecognition || window.webkitSpeechRecognition)
@@ -68,18 +68,17 @@ export default function Chatbot({
       setTranscript(finalTranscript + interimTranscript);
     };
 
-
-    // Cleanup on unmount
     return () => {
       recognition.stop();
       recognitionRef.current = null;
     };
   }, []);
 
-  const handleUserMessageSend = async () => {
+  const handleUserMessageSend = async (message?: string) => {
     recognitionRef.current?.stop();
+    setHasStarted(true);
     setListening(false);
-    const messageToSend = transcript.trim();
+    const messageToSend = transcript.trim() || message || "";
     if (messageToSend === "") {
       // Do not send empty messages
       return;
@@ -111,7 +110,9 @@ export default function Chatbot({
         }
       );
       if (response.ok) {
-        const interviewerMsg = await readStreamingApiResponseWithRunId(response);
+        const interviewerMsg = await readStreamingApiResponseWithRunId(
+          response
+        );
         setMessages((chatMessages: any) => {
           const updatedMessages = chatMessages.slice(0, -1);
           return [...updatedMessages, { role: "ai", text: interviewerMsg }];
@@ -175,47 +176,58 @@ export default function Chatbot({
 
   return (
     <div className="flex flex-col items-center my-20 space-y-4 w-full">
-      <div className="max-w-2xl w-full p-6 border border-gray-300 rounded-lg shadow-lg space-y-4 bg-white">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Chatbot</h2>
-        <div className="space-y-4 p-3 border-b border-gray-300">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
+      {!hasStarted ? (
+        <button
+          onClick={() => handleUserMessageSend("Start interview")}
+          className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Start Interview
+        </button>
+      ) : (
+        <div className="max-w-2xl w-full p-6 border border-gray-300 rounded-lg shadow-lg space-y-4 bg-white">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Chatbot</h2>
+          <div className="space-y-4 p-3 border-b border-gray-300">
+            {messages.map((message, index) => (
               <div
-                className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
-                  message.role === "user"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-800"
+                key={index}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.text}</p>
+                <div
+                  className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
+                    message.role === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-800"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message.text}</p>
+                </div>
               </div>
+            ))}
+          </div>
+          {listening && (
+            <div className="text-green-500 mb-2">
+              Listening... Please speak.
             </div>
-          ))}
+          )}
+          <div className="flex space-x-2 mt-4">
+            <input
+              type="text"
+              value={transcript}
+              placeholder="Your response will appear here..."
+              className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
+              readOnly
+            />
+            <button
+              onClick={() => handleUserMessageSend}
+              className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Send
+            </button>
+          </div>
         </div>
-        {listening && (
-          <div className="text-green-500 mb-2">Listening... Please speak.</div>
-        )}
-        <div className="flex space-x-2 mt-4">
-          <input
-            type="text"
-            value={transcript}
-            placeholder="Your response will appear here..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
-            readOnly
-          />
-          <button
-            onClick={handleUserMessageSend}
-            className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Send
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

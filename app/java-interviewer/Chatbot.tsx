@@ -50,7 +50,6 @@ export default function Chatbot() {
                 }`}
               >
                 <p className="whitespace-pre-wrap">
-                  <strong>{message.role === "user" ? "You:" : "AI:"}</strong>{" "}
                   {message.text}
                 </p>
               </div>

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { readStreamingApiResponse } from "../utils";
 
 interface ChatMessage {
@@ -19,15 +19,75 @@ export default function Chatbot({
   generatedQuestions,
 }: ChatbotProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [userInput, setUserInput] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [listening, setListening] = useState(false);
   const [runId, setRunId] = useState("");
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  // Check for browser support
+  const isBrowserSupportsSpeechRecognition = !!(
+    typeof window !== "undefined" &&
+    (window.SpeechRecognition || window.webkitSpeechRecognition)
+  );
+
+  useEffect(() => {
+    if (!isBrowserSupportsSpeechRecognition) {
+      console.error("Browser doesn't support speech recognition.");
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      setListening(true);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+      let finalTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let transcriptPiece = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcriptPiece;
+        } else {
+          interimTranscript += transcriptPiece;
+        }
+      }
+
+      setTranscript(finalTranscript + interimTranscript);
+    };
+
+
+    // Cleanup on unmount
+    return () => {
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
 
   const handleUserMessageSend = async () => {
-    const messageToSend = userInput.trim();
+    recognitionRef.current?.stop();
+    setListening(false);
+    const messageToSend = transcript.trim();
+    if (messageToSend === "") {
+      // Do not send empty messages
+      return;
+    }
     const newMessage: ChatMessage = { role: "user", text: messageToSend };
     const newAIMessage: ChatMessage = { role: "ai", text: "Thinking..." };
     setMessages((chatMessages) => [...chatMessages, newMessage, newAIMessage]);
-    setUserInput("");
+    setTranscript("");
 
     try {
       const response = await fetch(
@@ -53,20 +113,33 @@ export default function Chatbot({
       if (response.ok) {
         const interviewerMsg = await readStreamingApiResponseWithRunId(response);
         setMessages((chatMessages: any) => {
-          const lastMessage = chatMessages[chatMessages.length - 1];
-          if (lastMessage && lastMessage.role === "ai") {
-            const updatedMessages = chatMessages.slice(0, -1);
-            return [...updatedMessages, { text: interviewerMsg, sender: "ai" }];
-          }
-          return [...chatMessages, { text: interviewerMsg, sender: "bot" }];
+          const updatedMessages = chatMessages.slice(0, -1);
+          return [...updatedMessages, { role: "ai", text: interviewerMsg }];
         });
+        handleAIResponse(interviewerMsg);
       } else {
         throw new Error("Failed");
       }
     } catch (error) {}
   };
 
- const readStreamingApiResponseWithRunId = async (response: any) => {
+  const handleAIResponse = (aiMessage: string) => {
+    const utterance = new SpeechSynthesisUtterance(aiMessage);
+    utterance.onend = () => {
+      // Start listening to the user after AI finishes speaking
+      startListening();
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startListening = () => {
+    if (recognitionRef.current && !listening) {
+      setTranscript("");
+      recognitionRef.current.start();
+    }
+  };
+
+  const readStreamingApiResponseWithRunId = async (response: any) => {
     const reader = response.body?.getReader();
     const decoder = new TextDecoder("utf-8");
     let result = "";
@@ -124,13 +197,16 @@ export default function Chatbot({
             </div>
           ))}
         </div>
+        {listening && (
+          <div className="text-green-500 mb-2">Listening... Please speak.</div>
+        )}
         <div className="flex space-x-2 mt-4">
           <input
             type="text"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Type your message..."
+            value={transcript}
+            placeholder="Your response will appear here..."
             className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
+            readOnly
           />
           <button
             onClick={handleUserMessageSend}

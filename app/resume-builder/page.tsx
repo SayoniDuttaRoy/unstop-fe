@@ -7,16 +7,16 @@ interface ChatMessage {
   text: string;
 }
 
-export default function page() {
+export default function Page() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputVal, setInputVal] = useState("");
   const [runId, setRunId] = useState("");
   const [createdResume, setCreatedResume] = useState("");
+  const [showChatbot, setShowChatbot] = useState(false); // New state to control display
 
-  const handleUserMessageSend = async () => {
-    const messageToSend = inputVal.trim();
+  const handleUserMessageSend = async (message?: string) => {
+    const messageToSend = inputVal.trim() || message || "";
     if (messageToSend === "") {
-      // Do not send empty messages
       return;
     }
     const newMessage: ChatMessage = { role: "user", text: messageToSend };
@@ -81,7 +81,7 @@ export default function page() {
         const decodedValue = decoder.decode(value, { stream: true });
         partialData += decodedValue;
         let lines = partialData.split("\n");
-        partialData = lines.pop() || ""; // Save incomplete line for next iteration
+        partialData = lines.pop() || "";
         for (let line of lines) {
           line = line.trim();
           if (line.startsWith("data:")) {
@@ -100,14 +100,12 @@ export default function page() {
                   setMessages((chatMessages: any) => {
                     const lastMessage = chatMessages[chatMessages.length - 1];
                     if (lastMessage && lastMessage.role === "ai") {
-                      // Remove the last message if it's from a bot
                       const updatedMessages = chatMessages.slice(0, -1);
                       return [
                         ...updatedMessages,
                         { text: streamingOutputMsg, role: "ai" },
                       ];
                     }
-                    // If the last message is not from a bot, just add the new bot message
                     return [
                       ...chatMessages,
                       { text: streamingOutputMsg, role: "ai" },
@@ -130,54 +128,80 @@ export default function page() {
     return streamingOutputMsg;
   };
 
+  const startChat = () => {
+    handleUserMessageSend("Start");
+    setShowChatbot(true);
+  }
+
   return (
     <div className="flex gap-16 p-20">
-      <div className="w-[60%]">
-        <p>Resume Builder Bot</p>
-        <div className="max-w-2xl w-full p-6 border border-gray-300 rounded-lg shadow-lg space-y-4 bg-white h-[700px] overflow-y-auto">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Chatbot</h2>
-          <div className="space-y-4 p-3 border-b border-gray-300">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
-                    message.role === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-800"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{message.text}</p>
-                </div>
+      {!showChatbot ? (
+        <div className="w-full text-center">
+          <p className="text-xl mb-4">
+            To create your resume, you will need to provide details such as{" "}
+            <strong>personal details</strong>,{" "}
+            <strong>educational qualifications</strong>, and{" "}
+            <strong>job experience</strong>. It should take around 10 minutes.
+          </p>
+          <button
+            onClick={() => startChat()}
+            className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Let’s Get Started
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="w-[60%]">
+            <p>Resume Builder Bot</p>
+            <div className="max-w-2xl w-full p-6 border border-gray-300 rounded-lg shadow-lg space-y-4 bg-white h-[700px] overflow-y-auto">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+                Chatbot
+              </h2>
+              <div className="space-y-4 p-3 border-b border-gray-300">
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${
+                      message.role === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
+                        message.role === "user"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-200 text-gray-800"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{message.text}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+              <div className="flex space-x-2 mt-4">
+                <textarea
+                  value={inputVal}
+                  rows={2}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
+                />
+                <button
+                  onClick={() => handleUserMessageSend()}
+                  className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex space-x-2 mt-4">
-            <textarea
-              value={inputVal}
-              rows={2}
-              onChange={(e) => setInputVal(e.target.value)}
-              className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
-            />
-            <button
-              onClick={() => handleUserMessageSend()}
-              className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Send
-            </button>
+          <div className="w-[40%]">
+            <p>Created Resume</p>
+            <div className="prose">
+              <ReactMarkdown>{createdResume}</ReactMarkdown>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="w-[40%]">
-        <p>Created Resume</p>
-        <div className="prose">
-          <ReactMarkdown>{createdResume}</ReactMarkdown>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

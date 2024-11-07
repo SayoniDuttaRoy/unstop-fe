@@ -192,6 +192,10 @@ export default function Chatbot({
     return streamingOutputMsg;
   };
 
+  const handleEndInterview = () => {
+
+  }
+
   return (
     <div className="flex flex-col items-center my-20 space-y-4 w-full">
       {!hasStarted ? (
@@ -202,52 +206,64 @@ export default function Chatbot({
           Start Interview
         </button>
       ) : (
-        <div className="max-w-2xl w-full p-6 border border-gray-300 rounded-lg shadow-lg space-y-4 bg-white">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Chatbot</h2>
-          <div className="space-y-4 p-3 border-b border-gray-300">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+        <div className="w-full">
+          <div className="max-w-2xl w-full p-6 border border-gray-300 rounded-lg shadow-lg space-y-4 bg-white">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+              Chatbot
+            </h2>
+            <div className="space-y-4 p-3 border-b border-gray-300">
+              {messages.map((message, index) => (
                 <div
-                  className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
-                    message.role === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-800"
+                  key={index}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{message.text}</p>
+                  <div
+                    className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
+                      message.role === "user"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-800"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{message.text}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          {listening && (
-            <div className="text-green-500 mb-2">
-              Listening... Please speak.
+              ))}
             </div>
-          )}
-          <div className="flex space-x-2 mt-4">
-            <textarea
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Your response will appear here..."
-              className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
-            />
-            <button
-              onClick={startListening}
-              className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Start Answering
-            </button>
-            <button
-              onClick={() => handleUserMessageSend()}
-              className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Send
-            </button>
+            {listening && (
+              <div className="text-green-500 mb-2">
+                Listening... Please speak.
+              </div>
+            )}
+            <div className="flex space-x-2 mt-4">
+              <textarea
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                placeholder="Your response will appear here..."
+                className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-blue-200"
+              />
+              <button
+                onClick={startListening}
+                className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Start Answering
+              </button>
+              <button
+                onClick={() => handleUserMessageSend()}
+                className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+          <div className="flex justify-center my-10">
+          <button
+            onClick={handleEndInterview}
+            className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            End Interview
+          </button>
           </div>
         </div>
       )}

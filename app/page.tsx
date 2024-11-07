@@ -6,6 +6,9 @@ export default function Home() {
       <a href="/java-interviewer" className="underline">
         Java Interviewer
       </a>
+      <a href="/resume-builder" className="underline">
+        Resume Builder
+      </a>
     </div>
   );
 }

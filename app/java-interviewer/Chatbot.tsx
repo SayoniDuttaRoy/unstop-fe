@@ -23,6 +23,7 @@ export default function Chatbot({
   const [transcript, setTranscript] = useState("");
   const [listening, setListening] = useState(false);
   const [runId, setRunId] = useState("");
+  const [evalReport, setEvalReport] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const isBrowserSupportsSpeechRecognition = !!(
@@ -192,9 +193,46 @@ export default function Chatbot({
     return streamingOutputMsg;
   };
 
-  const handleEndInterview = () => {
+  const generateFinalTranscript = () => {
+    return messages
+      .map((message) => {
+        const role = message.role === "ai" ? "interviewer" : "interviewee";
+        return `${role}: ${message.text}`;
+      })
+      .join("\n");
+  };
 
-  }
+  const handleEndInterview = async () => {
+    try {
+      const response = await fetch(
+        "https://api.genfuseai.com/api/v1/apps/run_apis",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization:
+              "Bearer fc1f3aee73721c92ed2152490a0c3fc0ad9510d4bce7cb64774c76e3cf32266a",
+          },
+          body: JSON.stringify({
+            app_id: "e283f5a3-77cc-4715-8cec-bbdf8771a2ea",
+            "in-1": generateFinalTranscript(),
+            "in-2": jobDesc,
+            "in-3": skills,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const evalreport = await readStreamingApiResponse(response);
+        setEvalReport(evalreport);
+      } else {
+        console.error("Failed to end the interview");
+      }
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center my-20 space-y-4 w-full">
@@ -257,13 +295,19 @@ export default function Chatbot({
               </button>
             </div>
           </div>
-          <div className="flex justify-center my-10">
-          <button
-            onClick={handleEndInterview}
-            className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            End Interview
-          </button>
+          <div className="flex justify-center my-10 flex-col gap-8">
+            <button
+              onClick={handleEndInterview}
+              className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              End Interview
+            </button>
+            {evalReport.length > 0 && (
+              <div>
+                <p className="text-lg font-medium mb-5">Evaluation Report</p>
+                {evalReport}
+              </div>
+            )}
           </div>
         </div>
       )}

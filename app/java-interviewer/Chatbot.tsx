@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { readStreamingApiResponse } from "../utils";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessage {
   role: "user" | "ai";
@@ -24,6 +25,7 @@ export default function Chatbot({
   const [listening, setListening] = useState(false);
   const [runId, setRunId] = useState("");
   const [evalReport, setEvalReport] = useState("");
+  const [generatingReport, setGeneratingReport] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const isBrowserSupportsSpeechRecognition = !!(
@@ -204,6 +206,7 @@ export default function Chatbot({
 
   const handleEndInterview = async () => {
     try {
+      setGeneratingReport(true);
       const response = await fetch(
         "https://api.genfuseai.com/api/v1/apps/run_apis",
         {
@@ -225,6 +228,7 @@ export default function Chatbot({
 
       if (response.ok) {
         const evalreport = await readStreamingApiResponse(response);
+        setGeneratingReport(false);
         setEvalReport(evalreport);
       } else {
         console.error("Failed to end the interview");
@@ -302,10 +306,13 @@ export default function Chatbot({
             >
               End Interview
             </button>
+            {generatingReport && <div>Generating Report...</div>}
             {evalReport.length > 0 && (
               <div>
-                <p className="text-lg font-medium mb-5">Evaluation Report</p>
-                {evalReport}
+                <p className="text-lg font-medium my-5">Evaluation Report</p>
+                <div className="prose">
+                  <ReactMarkdown>{evalReport}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>

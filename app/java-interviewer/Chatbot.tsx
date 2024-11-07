@@ -141,10 +141,10 @@ export default function Chatbot({
         const { value, done: readDone } = await Promise.race([
           reader.read(),
           new Promise<any>((resolve) =>
-            setTimeout(() => resolve({ value: null, done: true }), 5000)
+            setTimeout(() => resolve({ value: null, done: true }), 1000)
           ),
         ]);
-        if (Date.now() - lastDataReceivedTime > 5000) {
+        if (Date.now() - lastDataReceivedTime > 1000) {
           break;
         }
         if (value) {

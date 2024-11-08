@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import Chatbot from "./Chatbot";
 import { readStreamingApiResponse } from "../utils";
-import 'regenerator-runtime/runtime';
 
 export default function Page() {
   const [jobDescription, setJobDescription] = useState("");
